@@ -3,12 +3,13 @@ from pysqream_blue.logger import *
 from dotenv import load_dotenv
 load_dotenv()
 import grpc
-from pysqream_blue.globals import auth_services, auth_messages, qh_services, qh_messages, cl_messages, auth_type_messages, __version__
+from pysqream_blue.globals import auth_services, auth_messages, qh_services, qh_messages, cl_messages, auth_type_messages
 import time
 import socket
 import os
 from pysqream_blue.utils import is_token_expired
 from pysqream_blue.cursor import Cursor
+from setup import package_version
 
 
 class Connection:
@@ -156,7 +157,7 @@ class Connection:
             tenant_id=self.tenant_id,
             database=self.database,
             source_ip=self.get_source_ip(),
-            client_info=cl_messages.ClientInfo(version=f"pysqream-blue_V{__version__}",
+            client_info=cl_messages.ClientInfo(version=f"pysqream-blue_V{package_version}",
                                                source_type=cl_messages.SourceType.Value(self.source_type)),
             pool_name=self.pool_name
         ), credentials=grpc.access_token_call_credentials(self.token))

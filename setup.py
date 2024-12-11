@@ -18,7 +18,7 @@ setup_params = dict(
     url="https://github.com/SQream/pysqream-blue",
     author="SQream",
     author_email="info@sqream.com",
-    packages=find_packages(),
+    packages=["pysqream_blue", "protos"],
     classifiers=[
         "Programming Language :: Python :: 3.9",
         "License :: OSI Approved :: BSD License",

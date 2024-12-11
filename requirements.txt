@@ -1,7 +1,7 @@
-google==3.0.0
-googleapis-common-protos==1.53.0
-setuptools==65.5.1
-grpcio==1.53.0
-grpcio-tools==1.47.0
+google>=3.0.0
+googleapis-common-protos>=1.53.0
+setuptools>=65.5.1
+grpcio>=1.53.0
+grpcio-tools>=1.47.0
 numpy>=1.20
 python-dotenv>=1.0.0

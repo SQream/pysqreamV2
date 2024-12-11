@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-package_version = '1.0.50'
+PACKAGE_VERSION = '1.0.50'
 
 with open("README.rst", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -11,7 +11,7 @@ with open("requirements.txt", "r", encoding="utf-8") as req:
 
 setup_params = dict(
     name='pysqream-blue',
-    version=package_version,
+    version=PACKAGE_VERSION,
     description='DB-API connector for SQream DB',
     long_description=long_description,
     long_description_content_type="text/x-rst",

@@ -9,7 +9,7 @@ import socket
 import os
 from pysqream_blue.utils import is_token_expired
 from pysqream_blue.cursor import Cursor
-from setup import package_version
+from setup import PACKAGE_VERSION
 
 
 class Connection:
@@ -157,7 +157,7 @@ class Connection:
             tenant_id=self.tenant_id,
             database=self.database,
             source_ip=self.get_source_ip(),
-            client_info=cl_messages.ClientInfo(version=f"pysqream-blue_V{package_version}",
+            client_info=cl_messages.ClientInfo(version=f"pysqream-blue_V{PACKAGE_VERSION}",
                                                source_type=cl_messages.SourceType.Value(self.source_type)),
             pool_name=self.pool_name
         ), credentials=grpc.access_token_call_credentials(self.token))

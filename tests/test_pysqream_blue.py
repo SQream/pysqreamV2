@@ -13,7 +13,6 @@ q = Queue()
 varchar_length = 10
 nvarchar_length = 10
 max_bigint = sys.maxsize if sys.platform not in ('win32', 'cygwin') else 2147483647
-_access_token="Z2hZaDdyMmhEWHFkdGJBN3c4em9SSndjcVBXQjI5a05XZjRHSHU4X1B0R1RmbzYzYm53NENGaUVIMGlSX0lLRjVhMUQ3c3JfbHQyVGtfRk1md3U5T1M3aXNlZlcwS2l4"
 
 def generate_varchar(length):
     return ''.join(chr(num) for num in randint(32, 128, length))
@@ -46,11 +45,11 @@ neg_test_vals = {'tinyint': (258, 3.6, 'test',  (1997, 5, 9), (1997, 12, 12, 10,
                  'nvarchar': (5, 3.6, (1, 2), (1997, 12, 12, 10, 10, 10), False, True)}
 
 
-def connect_pysqream_blue(domain, use_ssl=True, use_logs=False, log_path=None, log_level='INFO'):
+def connect_pysqream_blue(domain, access_token, use_ssl=True, use_logs=False, log_path=None, log_level='INFO'):
     if use_logs:
         pysqream_blue.set_log_path(log_path)
     return pysqream_blue.connect(host=domain, use_ssl=use_ssl,
-                                 access_token=_access_token, use_logs=use_logs, log_level=log_level)
+                                 access_token=access_token, use_logs=use_logs, log_level=log_level)
 
 
 class Query():
@@ -92,6 +91,10 @@ class TestBase():
         return pytestconfig.getoption("domain")
 
     @pytest.fixture()
+    def access_token(self, pytestconfig):
+        return pytestconfig.getoption("access_token")
+
+    @pytest.fixture()
     def log_path(self, pytestconfig):
         return pytestconfig.getoption("log_path", default=None)
 
@@ -104,11 +107,12 @@ class TestBase():
         return pytestconfig.getoption("log_level", default='INFO')
 
     @pytest.fixture(autouse=True)
-    def Test_setup_teardown(self, domain, use_logs, log_path, log_level):
+    def Test_setup_teardown(self, domain, access_token, use_logs, log_path, log_level):
         self.domain = domain
+        self.access_token = access_token
         Logger().info("Before Scenario")
         Logger().info(f"Connect to server with domain {domain}")
-        self.con = connect_pysqream_blue(domain, use_logs=use_logs, log_path=log_path, log_level=log_level)
+        self.con = connect_pysqream_blue(domain, access_token, use_logs=use_logs, log_path=log_path, log_level=log_level)
         self.query = Query(self.con)
         yield
         Logger().info("After Scenario")
@@ -132,9 +136,14 @@ class TestBaseWithoutBeforeAfter():
     def domain(self, pytestconfig):
         return pytestconfig.getoption("domain")
 
+    @pytest.fixture()
+    def access_token(self, pytestconfig):
+        return pytestconfig.getoption("access_token")
+
     @pytest.fixture(autouse=True)
-    def Test_setup_teardown(self, domain):
+    def Test_setup_teardown(self, domain, access_token):
         self.domain = domain
+        self.access_token = access_token
         yield
 
 
@@ -166,7 +175,7 @@ class TestConnection(TestBaseWithoutBeforeAfter):
     def test_connection(self):
 
         Logger().info("connect and run select 1")
-        con = connect_pysqream_blue(self.domain, use_ssl=False)
+        con = connect_pysqream_blue(self.domain, self.access_token, use_ssl=False)
         cur = con.cursor()
         try:
             cur.execute("select 1")
@@ -177,7 +186,7 @@ class TestConnection(TestBaseWithoutBeforeAfter):
         Logger().info("Connection tests - wrong ip")
         try:
             pysqream_blue.connect(host='123.4.5.6', port='443', database='master', username='sqream',
-                                  password='sqream',use_ssl=False, access_token=_access_token)
+                                  password='sqream',use_ssl=False, access_token=self.access_token)
         except Exception as e:
             if "Error from grpc while attempting to open database connection" not in repr(e):
                 raise Exception("bad error message")
@@ -185,7 +194,7 @@ class TestConnection(TestBaseWithoutBeforeAfter):
         Logger().info("Connection tests - wrong port")
         try:
             pysqream_blue.connect(host=self.domain, port='6000', database='master', username='sqream',
-                                  password='sqream', use_ssl=False, access_token=_access_token)
+                                  password='sqream', use_ssl=False, access_token=self.access_token)
         except Exception as e:
             if "Error from grpc while attempting to open database connection" not in repr(e):
                 raise Exception("bad error message")
@@ -193,7 +202,7 @@ class TestConnection(TestBaseWithoutBeforeAfter):
         Logger().info("Connection tests - wrong database")
         try:
             pysqream_blue.connect(host=self.domain, port='443', database='wrong_db', username='sqream',
-                                  password='sqream', use_ssl=False, access_token=_access_token)
+                                  password='sqream', use_ssl=False, access_token=self.access_token)
         except Exception as e:
             if "database \"wrong_db\" does not exist" not in repr(e).replace("""\\""", ''):
                 raise Exception("bad error message")
@@ -201,7 +210,7 @@ class TestConnection(TestBaseWithoutBeforeAfter):
         Logger().info("Connection tests - wrong username")
         try:
             pysqream_blue.connect(host=self.domain, port='443', database='master', username='wrong_username',
-                                  password='sqream', use_ssl=False, access_token=_access_token)
+                                  password='sqream', use_ssl=False, access_token=self.access_token)
         except Exception as e:
             if "role \'wrong_username\' doesn't exist" not in repr(e).replace("""\\""", ''):
                 raise Exception("bad error message")
@@ -209,13 +218,13 @@ class TestConnection(TestBaseWithoutBeforeAfter):
         Logger().info("Connection tests - wrong password")
         try:
             pysqream_blue.connect(host=self.domain, port='443', database='master', username='sqream',
-                                  password='wrong_pw', use_ssl=False, access_token=_access_token)
+                                  password='wrong_pw', use_ssl=False, access_token=self.access_token)
         except Exception as e:
             if "wrong password for role 'sqream'" not in repr(e).replace("""\\""", ''):
                 raise Exception("bad error message")
 
         Logger().info("Connection tests - close() function")
-        con = connect_pysqream_blue(self.domain)
+        con = connect_pysqream_blue(self.domain, self.access_token)
         cur = con.cursor()
         cur.close()
         try:
@@ -225,7 +234,7 @@ class TestConnection(TestBaseWithoutBeforeAfter):
                 raise Exception("bad error message")
 
         Logger().info("Connection tests - Trying to close a connection that is already closed with close()")
-        con = connect_pysqream_blue(self.domain)
+        con = connect_pysqream_blue(self.domain, self.access_token)
         con.close()
         try:
             con.close()
@@ -693,7 +702,7 @@ class TestTimeout(TestBaseWithoutBeforeAfter):
         con = None
         try:
             Logger().info("test_timeout after 120 seconds")
-            con = pysqream_blue.connect(host=self.domain, use_ssl=False, query_timeout=120, access_token=_access_token)
+            con = pysqream_blue.connect(host=self.domain, use_ssl=False, query_timeout=120, access_token=self.access_token)
             cur = con.cursor()
             cur.execute("select sleep(200)")
         except Exception as e:
@@ -712,7 +721,7 @@ class TestNoTimeout(TestBaseWithoutBeforeAfter):
             Logger().info("test_no_timeout")
             start_time = datetime.now()
             Logger().info(start_time)
-            con = pysqream_blue.connect(host=self.domain, use_ssl=False, access_token=_access_token)
+            con = pysqream_blue.connect(host=self.domain, use_ssl=False, access_token=self.access_token)
             cur = con.cursor()
             cur.execute("select sleep(200)")
             end_time = datetime.now()

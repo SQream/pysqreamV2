@@ -350,12 +350,12 @@ class TestNegative(TestBase):
                 raise Exception(f'bad error message')
 
         Logger().info("Negative tests - Incorrect usage of fetchmany - fetch without a statement")
-        self.execute("create or replace table test (xint int)")
         cur = self.con.cursor()
+        cur.execute("create or replace table test (xint int)")
         try:
             cur.fetchmany(2)
         except Exception as e:
-            if "No open statement while attempting fetch operation" not in repr(e):
+            if "No open statement while attempting fetch operation" not in str(e):
                 raise Exception(f'bad error message')
         cur.close()
 

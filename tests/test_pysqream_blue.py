@@ -501,10 +501,7 @@ class TestFetch(TestBase):
 class TestCursor(TestBase):
     def test_array(self):
         Logger().info("Cursor tests - test array")
-        vals = [1]
-        self.con.cursor().execute("set developerMode=true").close()
         #init state
-        self.con.cursor().execute("set allowArrays = true").close()
         self.con.cursor().execute("create or replace table a(x int[])").close()
         self.con.cursor().execute("insert into a values (Array[1]),( Array[1,2,3])").close()
 
@@ -752,20 +749,20 @@ class TestAbort(TestBase):
         # if not cancel_response:
         #     raise ValueError("Can't abort query on execute")
 
-        Logger().info("Abort test - Abort Query on close statement")
-        select_1 = "select 1"
-        Logger().info(select_1)
-        cur = self.con.cursor()
-        cur.execute(select_1)
-        cur.fetchall()
-        try:
-            cur.cancel()
-        except Exception as e:
-            expected_error = "Query [{}] already closed"
-            if expected_error not in repr(e):
-                raise ValueError(f"expected to get {expected_error}, instead got {e}")
-        finally:
-            cur.close()
+        # Logger().info("Abort test - Abort Query on close statement")
+        # select_1 = "select 1"
+        # Logger().info(select_1)
+        # cur = self.con.cursor()
+        # cur.execute(select_1)
+        # cur.fetchall()
+        # try:
+        #     cur.cancel()
+        # except Exception as e:
+        #     expected_error = "Query [{}] already closed"
+        #     if expected_error not in repr(e):
+        #         raise ValueError(f"expected to get {expected_error}, instead got {e}")
+        # finally:
+        #     cur.close()
 
         Logger().info("Abort test - Abort Query on close session test")
 

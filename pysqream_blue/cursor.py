@@ -22,7 +22,8 @@ class Cursor:
         self.logs = logs
         self.use_ssl = use_ssl
         self.more_to_fetch = False
-        self.statement_opened = False
+        self.statement_opened = True
+        self.statement_executed = False
         self.description = None
         self.stmt_id = None
         self.rowcount = -1
@@ -45,18 +46,15 @@ class Cursor:
     def execute(self, query: str, params=None):
         ''' Execute a statement. Parameters are not supported '''
 
-        # self._verify_open()
+        if not self.statement_opened:
+            self.logs.log_and_raise(ProgrammingError, 'Statement has been closed')
         if params:
             self.logs.log_and_raise(NotSupportedError, "Parametered queries currently not supported.")
-        # if self.statement_opened:
-        #     self.close()
-        self.logs.message("DANIEL!!!!!", self.logs.debug)
         self._request_compile(query)
-        self.statement_opened = True
         self._request_execute()
         self._request_status()
         self._prepare_result_set()
-
+        self.statement_executed = True
         return self
 
     def cancel(self):
@@ -97,7 +95,7 @@ class Cursor:
     def fetchmany(self, size):
         size = size or self.arraysize
         # self._verify_open()
-        if not self.statement_opened or self.query_type not in (None, qh_messages.QUERY_TYPE_QUERY):
+        if not self.statement_executed or self.query_type not in (None, qh_messages.QUERY_TYPE_QUERY):
             self.logs.log_and_raise(ProgrammingError, 'No open statement while attempting fetch operation')
 
         while (size > len(self.parsed_rows) or size == -1) and self.more_to_fetch:
@@ -147,7 +145,6 @@ class Cursor:
             self.logs.log_and_raise(ProgrammingError, f'Query: {query}. Error from grpc while attempting to compile the query.\n{rpc_error}')
 
     def _compile(self, query):
-
         self.logs.message(f"Compile query {query}", self.logs.info)
         response: qh_messages.CompileResponse = self.client.Compile(
             qh_messages.CompileRequest(context_id=self.context_id, sql=query.encode('utf8'), encoding='utf8',

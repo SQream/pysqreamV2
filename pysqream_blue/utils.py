@@ -40,5 +40,9 @@ class NotSupportedError(DatabaseError):
     pass
 
 
+class StreamRemovedException(Error):
+    pass
+
+
 def is_token_expired(e: str) -> bool:
     return e is not None and "expired" in e

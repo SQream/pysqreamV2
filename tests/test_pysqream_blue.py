@@ -254,9 +254,6 @@ class TestPositive(TestBase):
                 if type(val) in [date, datetime, str]:
                     Logger().info(f"insert into test values (\'{val}\')")
                     self.execute(f"insert into test values (\'{val}\')")
-                # elif type(val) == bool:
-                #     Logger().info(f"insert into test values ({str(val).lower()})")
-                #     self.execute(f"insert into test values ({str(val).lower()})")
                 else:
                     Logger().info(f"insert into test values ({val})")
                     self.execute(f"insert into test values ({val})")

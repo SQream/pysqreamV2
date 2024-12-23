@@ -703,7 +703,7 @@ class TestDatetime(TestBase):
 class TestAbort(TestBase):
 
     def test_abort(self):
-        # cur = self.con.cursor()
+        cur = self.con.cursor()
         # try:
         #     Logger().info("Abort test - Prepare data before testing")
         #     create_query = "create or replace table big_text (x text)"

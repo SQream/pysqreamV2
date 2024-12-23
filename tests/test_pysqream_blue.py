@@ -770,7 +770,7 @@ class TestAbort(TestBase):
         try:
             cur.cancel()
         except Exception as e:
-            expected_error = "Query [{}] already closed"
+            expected_error = "Context Id is not found"
             if expected_error not in repr(e):
                 raise ValueError(f"expected to get {expected_error}, instead got {e}")
 

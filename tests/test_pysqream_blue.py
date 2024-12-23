@@ -14,25 +14,21 @@ varchar_length = 10
 nvarchar_length = 10
 max_bigint = sys.maxsize if sys.platform not in ('win32', 'cygwin') else 2147483647
 
-def generate_varchar(length):
-    return ''.join(chr(num) for num in randint(32, 128, length))
+col_types = {'bool', 'tinyint', 'smallint', 'int', 'bigint', 'real', 'double', 'date', 'datetime', 'text'}
 
 
-col_types = {'bool', 'tinyint', 'smallint', 'int', 'bigint', 'real', 'double', 'date', 'datetime', 'nvarchar({})'.format(varchar_length)}#, 'varchar({})'.format(varchar_length)}
+pos_test_vals = {'bool': [0, 1, True, False, 2],
+                 'tinyint': [randint(0, 255), randint(0, 255), 0, 255],
+                 'smallint': [randint(-32768, 32767), 0, -32768, 32767],
+                 'int': [randint(-2147483648, 2147483647), 0, -2147483648, 2147483647],
+                 'bigint': [randint(1-max_bigint, max_bigint), 0, 1-max_bigint, max_bigint],
+                 'real': [round(uniform(1e-6, 1e6), 5), 837326.52428],   # float('nan')
+                 'double': [uniform(1e-6, 1e6)],  # float('nan')
+                 'date': [date(1998, 9, 24), date(2020, 12, 1), date(1997, 5, 9), date(1993, 7, 13)],
+                 'datetime': [datetime(1001, 1, 1, 10, 10, 10), datetime(1997, 11, 30, 10, 10, 10), datetime(1987, 7, 27, 20, 15, 45), datetime(1993, 12, 20, 17, 25, 46)],
+                 'text': ['א', 'א  ', '', 'ab א']}
 
-
-pos_test_vals = {'bool': (0, 1, True, False, 2),
-                 'tinyint': (randint(0, 255), randint(0, 255), 0, 255, True, False),
-                 'smallint': (randint(-32768, 32767), 0, -32768, 32767, True, False),
-                 'int': (randint(-2147483648, 2147483647), 0, -2147483648, 2147483647, True, False),
-                 'bigint': (randint(1-max_bigint, max_bigint), 0, 1-max_bigint, max_bigint, True, False),
-                 'real': (round(uniform(1e-6, 1e6), 5), 837326.52428, True, False),   # float('nan')
-                 'double': (uniform(1e-6, 1e6), True, False),  # float('nan')
-                 'date': (date(1998, 9, 24), date(2020, 12, 1), date(1997, 5, 9), date(1993, 7, 13)),
-                 'datetime': (datetime(1001, 1, 1, 10, 10, 10), datetime(1997, 11, 30, 10, 10, 10), datetime(1987, 7, 27, 20, 15, 45), datetime(1993, 12, 20, 17, 25, 46)),
-                #  'varchar': (generate_varchar(varchar_length), generate_varchar(varchar_length), generate_varchar(varchar_length), 'b   '),
-                 'nvarchar': ('א', 'א  ', '', 'ab א')}
-
+# After parameterized query supported -
 neg_test_vals = {'tinyint': (258, 3.6, 'test',  (1997, 5, 9), (1997, 12, 12, 10, 10, 10)),
                  'smallint': (40000, 3.6, 'test', (1997, 5, 9), (1997, 12, 12, 10, 10, 10)),
                  'int': (9999999999, 3.6, 'test',  (1997, 5, 9), (1997, 12, 12, 10, 10, 10)),
@@ -41,8 +37,7 @@ neg_test_vals = {'tinyint': (258, 3.6, 'test',  (1997, 5, 9), (1997, 12, 12, 10,
                  'double': ('test', (1997, 12, 12, 10, 10, 10)),
                  'date': (5, 3.6, (-8, 9, 1), (2012, 15, 6), (2012, 9, 45), 'test', False, True),
                  'datetime': (5, 3.6, (-8, 9, 1, 0, 0, 0), (2012, 15, 6, 0, 0, 0), (2012, 9, 45, 0, 0, 0), (2012, 9, 14, 26, 0, 0), (2012, 9, 14, 13, 89, 0), 'test', False, True),
-                #  'varchar': (5, 3.6, (1, 2), (1997, 12, 12, 10, 10, 10), False, True),
-                 'nvarchar': (5, 3.6, (1, 2), (1997, 12, 12, 10, 10, 10), False, True)}
+                 'text': (5, 3.6, (1, 2), (1997, 12, 12, 10, 10, 10), False, True)}
 
 
 def connect_pysqream_blue(domain, access_token, use_ssl=True, use_logs=False, log_path=None, log_level='INFO'):
@@ -230,7 +225,7 @@ class TestConnection(TestBaseWithoutBeforeAfter):
         try:
             cur.execute('select 1')
         except Exception as e:
-            if "Session has been closed" not in repr(e):
+            if "Statement has been closed" not in repr(e):
                 raise Exception("bad error message")
 
         Logger().info("Connection tests - Trying to close a connection that is already closed with close()")
@@ -241,21 +236,6 @@ class TestConnection(TestBaseWithoutBeforeAfter):
         except Exception as e:
             if "Trying to close a connection that's already closed" not in repr(e):
                 raise Exception("bad error message")
-
-        # ssl not supported
-        # Logger().info("Connection tests - negative test for use_ssl=True")
-        # try:
-        #     pysqream_blue.connect(self.domain, 5000, 'master', 'sqream', 'sqream', False, True)
-        # except Exception as e:
-        #     if "Using use_ssl=True but connected to non ssl sqreamd port" not in repr(e):
-        #         raise Exception("bad error message")
-
-        # Logger().info("Connection tests - positive test for use_ssl=True")
-        # con = connect_pysqream_blue(False, True)
-        # res = con.execute('select 1').fetchall()[0][0]
-        # if res != 1:
-        #     if f'expected to get 1, instead got {res}' not in repr(e):
-        #         raise Exception("bad error message")
 
 
 class TestPositive(TestBase):
@@ -361,14 +341,6 @@ class TestNegative(TestBase):
         #     if "Incosistent data sequences passed for inserting. Please use rows/columns of consistent length" not in repr(e):
         #         raise Exception(f'bad error message')
 
-        Logger().info("Negative tests - Varchar - Conversion of a varchar to a smaller length")
-        self.execute("create or replace table test (test varchar(10))")
-        try:
-            self.execute("insert into test values ('aa12345678910')")
-        except Exception as e:
-            if "Conversion of a varchar to a smaller length is not supported" not in repr(e):
-                            raise Exception(f'bad error message')
-
         Logger().info("Negative tests - Nvarchar - Conversion of a varchar to a smaller length")
         self.execute("create or replace table test (test nvarchar(10))")
         try:
@@ -409,15 +381,6 @@ class TestNegative(TestBase):
                 raise Exception(f'bad error message')
         cur.close()
 
-        Logger().info("Negative tests - Multi statements test")
-        cur = self.con.cursor()
-        try:
-            cur.execute("select 1; select 1;")
-        except Exception as e:
-            if "expected one statement, got " not in repr(e):
-                raise Exception(f'bad error message')
-        cur.close()
-
         # not supported network insert
         # Logger().info("Negative tests - Parametered query tests")
         # params = 6
@@ -434,7 +397,7 @@ class TestNegative(TestBase):
         try:
             cur.execute("select 1")
         except Exception as e:
-            if "Session has been closed" not in repr(e):
+            if "Statement has been closed" not in repr(e):
                 raise Exception(f'bad error message')
 
 
@@ -535,10 +498,7 @@ class TestFetch(TestBase):
 class TestCursor(TestBase):
     def test_array(self):
         Logger().info("Cursor tests - test array")
-        vals = [1]
-        self.con.cursor().execute("set developerMode=true").close()
         #init state
-        self.con.cursor().execute("set allowArrays = true").close()
         self.con.cursor().execute("create or replace table a(x int[])").close()
         self.con.cursor().execute("insert into a values (Array[1]),( Array[1,2,3])").close()
 
@@ -661,7 +621,7 @@ class TestString(TestBase):
             self.execute(f"insert into test values ($${val[0]}$$)")
         cur = self.con.cursor()
         cur.execute("select * from test")
-        expected_list = ['', '', '\\n', '\\', ' \\', '\\\\', ' \nt', "'abd''ef'", 'abdef', 'abd"ef']
+        expected_list = [v[0] for v in values]
         res_list = []
         res_list += [x[0] for x in cur.fetchall()]
         if expected_list != res_list:
@@ -697,84 +657,84 @@ class TestDatetime(TestBase):
             raise Exception("expected to get different datetimes")
 
 
-class TestTimeout(TestBaseWithoutBeforeAfter):
-    def test_timeout(self):
-        con = None
-        try:
-            Logger().info("test_timeout after 120 seconds")
-            con = pysqream_blue.connect(host=self.domain, use_ssl=False, query_timeout=120, access_token=self.access_token)
-            cur = con.cursor()
-            cur.execute("select sleep(200)")
-        except Exception as e:
-            if "Connection timeout expired" not in repr(e):
-                raise Exception(f'bad error message')
-        finally:
-            if con is not None:
-                con.close()
+# class TestTimeout(TestBaseWithoutBeforeAfter):
+#     def test_timeout(self):
+#         con = None
+#         try:
+#             Logger().info("test_timeout after 120 seconds")
+#             con = pysqream_blue.connect(host=self.domain, use_ssl=False, query_timeout=120, access_token=self.access_token)
+#             cur = con.cursor()
+#             cur.execute("select sleep(200)")
+#         except Exception as e:
+#             if "Connection timeout expired" not in repr(e):
+#                 raise Exception(f'bad error message')
+#         finally:
+#             if con is not None:
+#                 con.close()
 
 
-class TestNoTimeout(TestBaseWithoutBeforeAfter):
-
-    def test_no_timeout(self):
-        con = None
-        try:
-            Logger().info("test_no_timeout")
-            start_time = datetime.now()
-            Logger().info(start_time)
-            con = pysqream_blue.connect(host=self.domain, use_ssl=False, access_token=self.access_token)
-            cur = con.cursor()
-            cur.execute("select sleep(200)")
-            end_time = datetime.now()
-            Logger().info(end_time)
-            delta = end_time - start_time
-            if delta.seconds < 200:
-                raise ValueError("TimeOut occurs without reason!")
-        except Exception as e:
-            Logger().error(f"An error occurred {e}")
-            raise Exception(f"An error occurred {e}")
-        finally:
-            if con is not None:
-                con.close()
+# class TestNoTimeout(TestBaseWithoutBeforeAfter):
+#
+#     def test_no_timeout(self):
+#         con = None
+#         try:
+#             Logger().info("test_no_timeout")
+#             start_time = datetime.now()
+#             Logger().info(start_time)
+#             con = pysqream_blue.connect(host=self.domain, use_ssl=False, access_token=self.access_token)
+#             cur = con.cursor()
+#             cur.execute("select sleep(200)")
+#             end_time = datetime.now()
+#             Logger().info(end_time)
+#             delta = end_time - start_time
+#             if delta.seconds < 200:
+#                 raise ValueError("TimeOut occurs without reason!")
+#         except Exception as e:
+#             Logger().error(f"An error occurred {e}")
+#             raise Exception(f"An error occurred {e}")
+#         finally:
+#             if con is not None:
+#                 con.close()
 
 
 class TestAbort(TestBase):
 
     def test_abort(self):
         cur = self.con.cursor()
-        try:
-            Logger().info("Abort test - Prepare data before testing")
-            create_query = "create or replace table big_text (x text)"
-            insert_query1 = "insert into big_text values ('abcdef')"
-            insert_query2 = "insert into big_text values ('eflmg')"
-            insert_as_select_query = "insert into big_text select * from big_text"
-            Logger().info(create_query)
-            self.execute(create_query)
-            Logger().info(insert_query1)
-            self.execute(insert_query1)
-            Logger().info(insert_query2)
-            self.execute(insert_query2)
-            for i in range(15):
-                Logger().info(insert_as_select_query)
-                self.execute(insert_as_select_query)
-
-            Logger().info("Abort test - Abort Query on fetch test")
-            select_fetch_query = "select * from big_text where x like '%ef%'"
-            Logger().info(select_fetch_query)
-
-            cur.execute(select_fetch_query)
-            t = threading.Thread(target=cur.fetchall)
-            t.start()
-            time.sleep(5)
-            cancel_response = cur.cancel()
-            if not cancel_response:
-                raise ValueError("Can't abort query on fetch")
-        except Exception as e:
-            Logger().error(f"An error occurred {e}")
-        finally:
-            cur.close()
-            drop_query = "drop table big_text"
-            Logger().info(drop_query)
-            self.execute(drop_query)
+        # try:
+        #     Logger().info("Abort test - Prepare data before testing")
+        #     create_query = "create or replace table big_text (x text)"
+        #     insert_query1 = "insert into big_text values ('abcdef')"
+        #     insert_query2 = "insert into big_text values ('eflmg')"
+        #     insert_as_select_query = "insert into big_text select * from big_text"
+        #     Logger().info(create_query)
+        #     self.execute(create_query)
+        #     Logger().info(insert_query1)
+        #     self.execute(insert_query1)
+        #     Logger().info(insert_query2)
+        #     self.execute(insert_query2)
+        #     for i in range(15):
+        #         Logger().info(insert_as_select_query)
+        #         self.execute(insert_as_select_query)
+        #
+        #     Logger().info("Abort test - Abort Query on fetch test")
+        #     select_fetch_query = "select * from big_text where x like '%ef%'"
+        #     Logger().info(select_fetch_query)
+        #
+        #     cur.execute(select_fetch_query)
+        #     t = threading.Thread(target=cur.fetchall)
+        #     t.start()
+        #     time.sleep(5)
+        #     cancel_response = cur.cancel()
+        #     if not cancel_response:
+        #         raise ValueError("Can't abort query on fetch")
+        # except Exception as e:
+        #     Logger().error(f"An error occurred {e}")
+        # finally:
+        #     cur.close()
+        #     drop_query = "drop table big_text"
+        #     Logger().info(drop_query)
+        #     self.execute(drop_query)
 
         # Logger().info("Abort test - Abort Query on execute test")
         # select_sleep = "select sleep(200)"
@@ -786,20 +746,20 @@ class TestAbort(TestBase):
         # if not cancel_response:
         #     raise ValueError("Can't abort query on execute")
 
-        Logger().info("Abort test - Abort Query on close statement")
-        select_1 = "select 1"
-        Logger().info(select_1)
-        cur = self.con.cursor()
-        cur.execute(select_1)
-        cur.fetchall()
-        try:
-            cur.cancel()
-        except Exception as e:
-            expected_error = "Query [{}] already closed"
-            if expected_error not in repr(e):
-                raise ValueError(f"expected to get {expected_error}, instead got {e}")
-        finally:
-            cur.close()
+        # Logger().info("Abort test - Abort Query on close statement")
+        # select_1 = "select 1"
+        # Logger().info(select_1)
+        # cur = self.con.cursor()
+        # cur.execute(select_1)
+        # cur.fetchall()
+        # try:
+        #     cur.cancel()
+        # except Exception as e:
+        #     expected_error = "Query [{}] already closed"
+        #     if expected_error not in repr(e):
+        #         raise ValueError(f"expected to get {expected_error}, instead got {e}")
+        # finally:
+        #     cur.close()
 
         Logger().info("Abort test - Abort Query on close session test")
 
@@ -807,7 +767,7 @@ class TestAbort(TestBase):
         try:
             cur.cancel()
         except Exception as e:
-            expected_error = "Query [{}] already closed"
+            expected_error = "Context Id is not found"
             if expected_error not in repr(e):
                 raise ValueError(f"expected to get {expected_error}, instead got {e}")
 

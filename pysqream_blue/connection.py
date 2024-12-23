@@ -262,6 +262,6 @@ class Connection:
             hostname = socket.gethostname()
             ip_address = socket.gethostbyname(hostname)
         except socket.gaierror as e:
-            print(f"Error getting IP address: {e}")
+            self.logs.message(f"Error getting IP address: {e}", Warning)
             ip_address = "127.0.0.1"
         return ip_address
